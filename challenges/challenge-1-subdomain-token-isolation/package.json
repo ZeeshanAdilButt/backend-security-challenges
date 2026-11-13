@@ -1,8 +1,8 @@
 {
-  "name": "lab-01-subdomain-token-isolation",
+  "name": "challenge-1-subdomain-token-isolation",
   "version": "1.0.0",
   "private": true,
-  "description": "Local lab: why an apex-scoped session cookie leaks to every sibling subdomain, and how host-only cookies plus tenant-scoped JWTs fix it.",
+  "description": "Local challenge: why an apex-scoped session cookie leaks to every sibling subdomain, and how host-only cookies plus tenant-scoped JWTs fix it.",
   "type": "module",
   "scripts": {
     "start": "node server.js",

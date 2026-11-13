@@ -1,8 +1,8 @@
-# Lab 01: Subdomain Token Isolation
+# Challenge 1: Subdomain Token Isolation
 
 **The question:** your company runs many apps under one domain. Users should log in once. Is one session cookie for the whole domain a good idea?
 
-**The short answer:** no. One weak subdomain then compromises all of them. In this lab you watch that happen in your own browser, and then you fix it.
+**The short answer:** no. One weak subdomain then compromises all of them. In this challenge you watch that happen in your own browser, and then you fix it.
 
 You will:
 
@@ -43,7 +43,7 @@ There is one demo user, Alice, and no password. Logging in is a button.
 
 ## First principles
 
-You only need five ideas for this lab.
+You only need five ideas for this challenge.
 
 ### 1. An origin is the browser's wall
 
@@ -78,7 +78,7 @@ A browser cannot guess where that boundary is. `co.uk` looks like a domain, but 
 
 Two origins that share a registrable domain are called **same-site**. `gaming.lab.localhost` and `finance.lab.localhost` are different origins but the same site.
 
-> **Why this lab uses `lab.localhost` and not plain `localhost`.** A name with no entry on the list is treated like a top-level domain. So `localhost` counts as a public suffix, just like `com`. We tested it: Chromium silently drops `Set-Cookie: ...; Domain=.localhost` when it comes from `auth.localhost`. One level deeper it works. `lab.localhost` plays the role that `example.com` plays in real life.
+> **Why this challenge uses `lab.localhost` and not plain `localhost`.** A name with no entry on the list is treated like a top-level domain. So `localhost` counts as a public suffix, just like `com`. We tested it: Chromium silently drops `Set-Cookie: ...; Domain=.localhost` when it comes from `auth.localhost`. One level deeper it works. `lab.localhost` plays the role that `example.com` plays in real life.
 
 ### 4. `credentials: "include"`
 
@@ -90,7 +90,7 @@ fetch('http://api.lab.localhost:3000/api/cookie-data', { credentials: 'include' 
 
 Now the browser attaches every cookie that matches the **destination**. Notice what it does not ask: which page is making the request. A cookie says who the user is. It says nothing about which app is asking. Security people call this **ambient authority**.
 
-The API must agree before the page may read the answer. It has to reply with `Access-Control-Allow-Credentials: true` and name the exact origin in `Access-Control-Allow-Origin`. A wildcard `*` is not allowed here. This lab's API does that strictly, with an allow list. It still leaks, because `finance` is a real, allowed app. CORS decides who may read a response. It does not decide which cookies get attached.
+The API must agree before the page may read the answer. It has to reply with `Access-Control-Allow-Credentials: true` and name the exact origin in `Access-Control-Allow-Origin`. A wildcard `*` is not allowed here. This challenge's API does that strictly, with an allow list. It still leaks, because `finance` is a real, allowed app. CORS decides who may read a response. It does not decide which cookies get attached.
 
 What about `SameSite=Lax`? It stops cookies on requests that come from a different **site**. Sibling subdomains are the same site, so `SameSite` does nothing here.
 
@@ -212,14 +212,14 @@ CHECK_PORT=3200 npm run check
 
 `curl` sends whatever cookies you tell it to. It cannot prove how a real browser scopes them. That is what the dashboard is for.
 
-## What this lab does not solve
+## What this challenge does not solve
 
 Be honest about the limits of the fix.
 
 - **The `Origin` check only stops browsers.** A browser always sets `Origin` truthfully. A script outside a browser, such as `curl`, can send any `Origin` it likes. If a token leaves the browser, the tenant check alone will not save you. That is why the token lives for only two minutes. Stronger answers bind the token to a key the client holds (DPoP, mutual TLS).
 - **A bug on `gaming` is still a bug on `gaming`.** An attacker who can run script on `gaming` can use the gaming token from there. The fix keeps that damage inside one app. It does not remove it.
-- **Logging out does not cancel tokens.** A token that was already minted works until it expires. Short lifetimes keep that window small. Lab 02 covers refresh and revocation.
-- **Lab shortcuts.** This lab uses plain HTTP, one shared signing key (HS256) and a login with no password. A real system uses HTTPS, `Secure` cookies with the `__Host-` prefix, and asymmetric keys (RS256 or ES256) so the API only holds a public key.
+- **Logging out does not cancel tokens.** A token that was already minted works until it expires. Short lifetimes keep that window small. Challenge 2 covers refresh and revocation.
+- **Shortcuts taken here.** This challenge uses plain HTTP, one shared signing key (HS256) and a login with no password. A real system uses HTTPS, `Secure` cookies with the `__Host-` prefix, and asymmetric keys (RS256 or ES256) so the API only holds a public key.
 
 ## Troubleshooting
 

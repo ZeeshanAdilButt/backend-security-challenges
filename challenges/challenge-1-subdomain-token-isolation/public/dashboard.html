@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lab 01: Subdomain Token Isolation</title>
+<title>Challenge 1: Subdomain Token Isolation</title>
 <style>
   :root {
     --bg: #090d15; --panel: #101726; --panel-2: #0c1220; --line: #1f2a3f;
@@ -153,7 +153,7 @@
 <header class="top">
   <div class="brand">
     <div class="logo">BSC</div>
-    <div><strong>Backend Security Challenges</strong><span class="sub">Lab 01: Subdomain token isolation</span></div>
+    <div><strong>Backend Security Challenges</strong><span class="sub">Challenge 1: Subdomain token isolation</span></div>
   </div>
   <nav class="tabs" id="tabs" aria-label="Switch subdomain"></nav>
 </header>
@@ -224,7 +224,7 @@
       <svg id="flow" viewBox="0 0 920 330" role="img" aria-label="Animated diagram of requests between the browser, the identity provider, the two subdomains and the API"></svg>
       <div class="verdict" id="verdict" aria-live="polite">
         <strong>Ready</strong>
-        <span>Pick an experiment on the left. Every packet you see is a real HTTP request to the lab server.</span>
+        <span>Pick an experiment on the left. Every packet you see is a real HTTP request to the local server.</span>
       </div>
       <ol id="steps"></ol>
     </section>
@@ -253,7 +253,7 @@
   </div>
 </main>
 
-<footer>Local teaching lab. It runs on 127.0.0.1 only, with one demo user and a signing key that is thrown away on restart.</footer>
+<footer>Local teaching challenge. It runs on 127.0.0.1 only, with one demo user and a signing key that is thrown away on restart.</footer>
 
 <script>
 (() => {
@@ -423,7 +423,7 @@
     jsonLines($('jwtHeader'), decoded.header, null);
     jsonLines($('jwtPayload'), decoded.payload, 'tenant');
     $('jwtSig').textContent = decoded.parts[2] + '\n';
-    $('jwtSig').append(el('span', 'note', '// HMAC-SHA256 over header.payload with a key only the lab server holds.\n// Anyone can read a JWT. Nobody without the key can change one.'));
+    $('jwtSig').append(el('span', 'note', '// HMAC-SHA256 over header.payload with a key only the server holds.\n// Anyone can read a JWT. Nobody without the key can change one.'));
     tick();
   }
 
@@ -573,7 +573,7 @@
 
   function unexpected(res) {
     verdict('amber', 'Unexpected answer', res.status === 0
-      ? 'The browser got no readable response. Is the lab server still running?'
+      ? 'The browser got no readable response. Is the server still running?'
       : 'The server answered HTTP ' + res.status + '. See the response panel for details.');
   }
 
@@ -737,7 +737,7 @@
       verdict('amber', 'Stolen token already expired', 'Tokens only live for two minutes. Click the button again to steal a fresh one.');
     } else if (res.status === 200) {
       await hop('api', 'browser', '200 replay worked', 'red', '200 OK');
-      verdict('red', 'Replay worked', 'This should never happen in this lab. The tenant check on the API is missing or broken.');
+      verdict('red', 'Replay worked', 'This should never happen in this challenge. The tenant check on the API is missing or broken.');
     } else {
       unexpected(res);
     }

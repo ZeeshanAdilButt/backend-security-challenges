@@ -1,7 +1,7 @@
 # Backend Security Challenges
 
 ![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=nodedotjs&logoColor=white)
-![Security Labs](https://img.shields.io/badge/Security-Labs-e11d48)
+![Security Challenges](https://img.shields.io/badge/Security-Challenges-e11d48)
 ![Interactive](https://img.shields.io/badge/Interactive-browser%20dashboard-2563eb)
 ![License: MIT](https://img.shields.io/badge/License-MIT-16a34a)
 
@@ -9,23 +9,23 @@
 
 Reading about a security bug rarely sticks. Watching your own browser leak a session cookie does.
 
-Each lab in this repo is a small, real system that runs on your own machine. First you break it and see the attack work. Then you switch to the fixed design and watch the same attack fail. Every lab comes with a dashboard that shows the traffic as it happens, so you see the cause and not just the result.
+Each challenge in this repo is a small, real system that runs on your own machine. First you break it and see the attack work. Then you switch to the fixed design and watch the same attack fail. Every challenge comes with a dashboard that shows the traffic as it happens, so you see the cause and not just the result.
 
 Everything here is local and defensive. The servers listen on `127.0.0.1` only. There are no real users, no real secrets, and nothing to deploy.
 
-## Start with Lab 01
+## Start with Challenge 1
 
 You need [Node.js](https://nodejs.org) 18 or newer. Nothing else. No hosts file edits.
 
 ```bash
 git clone https://github.com/ZeeshanAdilButt/backend-security-challenges.git
-cd backend-security-challenges/labs/01-subdomain-token-isolation
+cd backend-security-challenges/challenges/challenge-1-subdomain-token-isolation
 npm install && npm start
 ```
 
-Then open <http://gaming.lab.localhost:3000> and follow the [Lab 01 guide](labs/01-subdomain-token-isolation/README.md).
+Then open <http://gaming.lab.localhost:3000> and follow the [Challenge 1 guide](challenges/challenge-1-subdomain-token-isolation/README.md).
 
-## Lab 01 in two pictures
+## Challenge 1 in two pictures
 
 ### The Trap
 
@@ -86,29 +86,29 @@ Now a stolen token is worth very little. It works for one app, from one subdomai
 
 ## Challenge matrix
 
-| Lab | Topic | You break | You build | Status |
+| Challenge | Topic | You break | You build | Status |
 | --- | --- | --- | --- | --- |
-| [01](labs/01-subdomain-token-isolation/) | Subdomain token isolation | A session cookie scoped to the apex domain that leaks to every sibling subdomain | A central IdP with a host-only cookie and tenant-scoped bearer JWTs | Completed |
-| 02 | OAuth 2.0 PKCE and refresh token rotation | An authorization code that can be intercepted, and a refresh token that lives forever | PKCE, refresh token rotation and reuse detection | Upcoming |
-| 03 | CORS misconfigurations and preflight bypass | An API that reflects any `Origin` and trusts requests that skip the preflight | A strict allow list and endpoints that do not rely on the preflight | Upcoming |
-| 04 | SSRF and internal metadata protection | A URL fetcher that can be pointed at internal services and cloud metadata | Destination allow lists, DNS pinning and blocked internal ranges | Upcoming |
+| [1](challenges/challenge-1-subdomain-token-isolation/) | Subdomain token isolation | A session cookie scoped to the apex domain that leaks to every sibling subdomain | A central IdP with a host-only cookie and tenant-scoped bearer JWTs | Completed |
+| 2 | OAuth 2.0 PKCE and refresh token rotation | An authorization code that can be intercepted, and a refresh token that lives forever | PKCE, refresh token rotation and reuse detection | Upcoming |
+| 3 | CORS misconfigurations and preflight bypass | An API that reflects any `Origin` and trusts requests that skip the preflight | A strict allow list and endpoints that do not rely on the preflight | Upcoming |
+| 4 | SSRF and internal metadata protection | A URL fetcher that can be pointed at internal services and cloud metadata | Destination allow lists, DNS pinning and blocked internal ranges | Upcoming |
 
-## How every lab is laid out
+## How every challenge is laid out
 
 ```
-labs/
-  01-subdomain-token-isolation/
+challenges/
+  challenge-1-subdomain-token-isolation/
     README.md        the guide: first principles, attack walkthrough, fix
     server.js        the whole backend in one readable file
     public/          the interactive dashboard
     check.mjs        an automated check you can run with "npm run check"
 ```
 
-Each lab is self-contained. It has its own `package.json`, so you install and run one lab at a time.
+Each challenge is self-contained. It has its own `package.json`, so you install and run one challenge at a time.
 
 ## Ground rules
 
-- **Local only.** Labs bind to `127.0.0.1`. Do not expose them to a network.
+- **Local only.** Challenges bind to `127.0.0.1`. Do not expose them to a network.
 - **For learning and defense.** Use these ideas on systems you own or are allowed to test.
 - **No real secrets.** Signing keys are generated at startup and thrown away on exit.
 

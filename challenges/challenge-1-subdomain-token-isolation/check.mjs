@@ -1,4 +1,4 @@
-// Automated check for Lab 01. Run it with: npm run check
+// Automated check for Challenge 1. Run it with: npm run check
 //
 // It starts its own copy of the server on a spare port, then uses curl with
 // custom Host and Origin headers against 127.0.0.1 to prove that the
@@ -171,7 +171,7 @@ const ready = new Promise((resolve, reject) => {
 let exitCode = 1;
 try {
   await ready;
-  console.log(`Lab 01 check: curl against ${BASE} with Host and Origin headers for *.${APEX}`);
+  console.log(`Challenge 1 check: curl against ${BASE} with Host and Origin headers for *.${APEX}`);
   runChecks();
   console.log(`\n${passed} passed, ${failed} failed`);
   exitCode = failed === 0 ? 0 : 1;

@@ -1,4 +1,4 @@
-// Lab 01: subdomain token isolation.
+// Challenge 1: subdomain token isolation.
 //
 // One Node process pretends to be four different hosts. It looks at the Host
 // header (req.hostname) and routes each request to the matching "server":
@@ -8,7 +8,7 @@
 //   gaming.<apex>   tenant A, a legitimate app.
 //   finance.<apex>  sibling B, an app we do not trust.
 //
-// This is a local teaching lab. It binds to 127.0.0.1 only, has one demo user
+// This is a local teaching challenge. It binds to 127.0.0.1 only, has one demo user
 // and no passwords. Do not deploy it.
 
 import crypto from 'node:crypto';
@@ -19,7 +19,7 @@ import jwt from 'jsonwebtoken';
 
 const PORT = Number(process.env.PORT) || 3000;
 
-// The shared parent domain of the four hosts. The lab README explains why this
+// The shared parent domain of the four hosts. The README explains why this
 // is "lab.localhost" and not plain "localhost".
 const APEX = (process.env.LAB_APEX || 'lab.localhost').toLowerCase();
 
@@ -45,7 +45,7 @@ const AUDIENCE = originOf(HOSTS.api);
 const TOKEN_TTL_SECONDS = 120;
 const SESSION_TTL_SECONDS = 3600;
 
-// One demo user. "Login" is a button, so nobody types a password in this lab.
+// One demo user. "Login" is a button, so nobody types a password in this challenge.
 const USER = { id: 'user-1001', name: 'Alice Demo' };
 
 // What the API protects, split per tenant.
@@ -265,7 +265,7 @@ api.get('/api/secure-data', (req, res) => {
   if (!origin) {
     return res.status(403).json({ error: 'origin_required', message: 'This endpoint needs an Origin header.' });
   }
-  // The check this lab is about: the token must be used from the subdomain
+  // The check this challenge is about: the token must be used from the subdomain
   // it was minted for. A valid token replayed from a sibling stops here.
   const originHost = new URL(origin).hostname;
   if (payload.tenant !== originHost) {
@@ -315,9 +315,9 @@ app.use((req, res, next) => {
 
 app.use((req, res) => res.status(404).json({ error: 'not_found' }));
 
-// 127.0.0.1 only: nothing outside this machine can reach the lab.
+// 127.0.0.1 only: nothing outside this machine can reach this server.
 app.listen(PORT, '127.0.0.1', () => {
-  console.log(`Lab 01 is listening on 127.0.0.1:${PORT}`);
+  console.log(`Challenge 1 is listening on 127.0.0.1:${PORT}`);
   console.log(`  identity provider  ${originOf(HOSTS.auth)}`);
   console.log(`  tenant A (trusted) ${originOf(HOSTS.gaming)}`);
   console.log(`  sibling B          ${originOf(HOSTS.finance)}`);

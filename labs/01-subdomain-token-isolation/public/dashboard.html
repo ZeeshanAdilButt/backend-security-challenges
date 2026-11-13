@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab 01: Subdomain Token Isolation</title>
+<style>
+  :root {
+    --bg: #090d15; --panel: #101726; --panel-2: #0c1220; --line: #1f2a3f;
+    --text: #e6edf7; --muted: #8d9ab1;
+    --green: #34d399; --red: #fb7185; --amber: #fbbf24; --gray: #94a3b8;
+    --blue: #60a5fa; --purple: #c4a1ff; --cyan: #67e8f9; --pink: #ff8fa3;
+    --accent: var(--blue);
+    --mono: ui-monospace, SFMono-Regular, "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  body[data-role="gaming"] { --accent: var(--green); }
+  body[data-role="finance"] { --accent: var(--red); }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background-image: radial-gradient(900px 400px at 15% -10%, rgba(96, 165, 250, .10), transparent 60%);
+    background-repeat: no-repeat;
+  }
+  code, pre, .mono { font-family: var(--mono); }
+  h2 { margin: 0 0 12px; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  h3 { margin: 0 0 6px; font-size: 15px; }
+  p { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+
+  .top {
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+    padding: 14px 24px; border-bottom: 1px solid var(--line); border-top: 3px solid var(--accent);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center;
+    font: 700 12px var(--mono); color: var(--bg); background: var(--accent);
+  }
+  .brand strong { display: block; font-size: 15px; }
+  .brand span.sub { color: var(--muted); font-size: 13px; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tabs a {
+    padding: 7px 12px; border: 1px solid var(--line); border-radius: 999px; text-decoration: none;
+    color: var(--muted); font: 13px var(--mono); background: var(--panel-2);
+  }
+  .tabs a:hover { color: var(--text); border-color: var(--muted); }
+  .tabs a.active { color: var(--bg); background: var(--accent); border-color: var(--accent); font-weight: 700; }
+
+  main { max-width: 1320px; margin: 0 auto; padding: 20px 24px 48px; display: grid; gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; min-width: 0; }
+
+  .banner { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap: 0; padding: 0; overflow: hidden; }
+  .cell { padding: 14px 16px; border-right: 1px solid var(--line); min-width: 0; }
+  .cell:last-child { border-right: 0; }
+  .k { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .cell code { display: block; font-size: 13px; overflow-wrap: anywhere; }
+  .origin { font: 700 16px var(--mono); color: var(--accent); overflow-wrap: anywhere; }
+  .chip {
+    display: inline-block; margin: 8px 0 6px; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+    color: var(--accent); border: 1px solid var(--accent);
+  }
+  .cell p { margin: 0; font-size: 13px; }
+  .muted { color: var(--muted); }
+  .tok { display: inline-block; margin: 0 6px 4px 0; padding: 1px 7px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel-2); }
+  .tok.red { color: var(--red); border-color: var(--red); }
+  .tok.green { color: var(--green); border-color: var(--green); }
+  .tok.amber { color: var(--amber); border-color: var(--amber); }
+
+  .layout { display: grid; grid-template-columns: 360px 1fr; gap: 16px; }
+  .layout.two { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 1020px) {
+    .layout, .layout.two, .banner { grid-template-columns: 1fr; }
+    .cell { border-right: 0; border-bottom: 1px solid var(--line); }
+  }
+
+  .group { padding: 12px 0; border-top: 1px solid var(--line); }
+  .group:first-of-type { border-top: 0; padding-top: 0; }
+  .num {
+    display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 6px; border-radius: 50%;
+    font: 700 12px var(--mono); color: var(--bg); background: var(--muted);
+  }
+  .btn {
+    display: block; width: 100%; margin: 0 0 8px; padding: 10px 12px; border-radius: 10px; cursor: pointer; text-align: left;
+    font: 600 14px system-ui, sans-serif; color: var(--text); background: var(--panel-2); border: 1px solid var(--line);
+    transition: border-color .15s, transform .05s;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--c, var(--blue)); }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .btn::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 10px; border-radius: 50%; background: var(--c, var(--blue)); }
+  .btn.good { --c: var(--green); }
+  .btn.warn { --c: var(--amber); }
+  .btn.danger { --c: var(--red); }
+  .btn.ghost { --c: var(--gray); font-weight: 500; }
+  .hidden { display: none; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin: -4px 0 8px; font-size: 12px; color: var(--muted); }
+  .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 6px; border-radius: 50%; background: var(--c); }
+  .tone-green { --c: var(--green); }
+  .tone-red { --c: var(--red); }
+  .tone-amber { --c: var(--amber); }
+  .tone-gray { --c: var(--gray); }
+
+  svg#flow { display: block; width: 100%; height: auto; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; }
+  .edge { stroke: var(--line); stroke-width: 1.5; }
+  .edge.theft { stroke-dasharray: 4 6; }
+  .node rect { fill: var(--panel); stroke: #33435f; stroke-width: 1.5; transition: stroke .2s, fill .2s; }
+  .node.here rect { stroke: var(--accent); stroke-width: 2.5; }
+  .node text { fill: var(--text); font: 600 14px var(--mono); }
+  .node text.s { fill: var(--muted); font: 12.5px system-ui, sans-serif; }
+  .node text.tag { fill: var(--accent); font: 700 10.5px system-ui, sans-serif; letter-spacing: .08em; }
+  .node.pulse rect { stroke: var(--c); fill: color-mix(in srgb, var(--c) 16%, var(--panel)); }
+  .wire { stroke: var(--c); stroke-width: 2.5; stroke-dasharray: 7 7; animation: dash .5s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -14; } }
+  .packet circle { fill: var(--c); filter: drop-shadow(0 0 6px var(--c)); }
+  .packet rect { fill: #070b12; stroke: var(--c); stroke-width: 1.2; }
+  .packet text { fill: var(--c); font: 600 11.5px var(--mono); }
+
+  .verdict { margin: 12px 0 0; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--c, var(--line)); background: color-mix(in srgb, var(--c, #000) 9%, var(--panel-2)); }
+  .verdict strong { display: block; color: var(--c, var(--text)); margin-bottom: 2px; }
+  .verdict span { color: var(--text); font-size: 14px; }
+  ol#steps { list-style: none; margin: 12px 0 0; padding: 0; counter-reset: s; }
+  ol#steps li {
+    counter-increment: s; display: grid; grid-template-columns: 26px minmax(0, 290px) 1fr; gap: 8px; align-items: baseline;
+    padding: 7px 0; border-top: 1px dashed var(--line); font-size: 13px;
+  }
+  ol#steps li::before { content: counter(s); display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font: 700 11px var(--mono); color: var(--bg); background: var(--c); }
+  ol#steps .route { font-family: var(--mono); color: var(--c); overflow-wrap: anywhere; }
+  ol#steps .what { color: var(--text); overflow-wrap: anywhere; }
+  @media (max-width: 700px) { ol#steps li { grid-template-columns: 26px 1fr; } ol#steps .what { grid-column: 2; } }
+
+  .jwt-raw { padding: 10px 12px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); font: 13px/1.6 var(--mono); overflow-wrap: anywhere; }
+  .seg-h { color: var(--pink); } .seg-p { color: var(--purple); } .seg-s { color: var(--cyan); }
+  .jwt-label { display: inline-block; margin-bottom: 10px; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; color: var(--c); border: 1px solid var(--c); }
+  .jwt-parts { display: grid; gap: 10px; margin-top: 12px; }
+  .part { border-left: 3px solid var(--c); padding: 2px 0 2px 12px; }
+  .part h4 { margin: 0 0 4px; font: 700 12px var(--mono); letter-spacing: .08em; color: var(--c); }
+  .part pre, pre#respBody { margin: 0; font: 13px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .part .note { color: var(--muted); }
+  .part .hl { background: color-mix(in srgb, var(--amber) 18%, transparent); outline: 1px solid var(--amber); border-radius: 4px; color: var(--amber); font-weight: 700; }
+  .part.h { --c: var(--pink); } .part.p { --c: var(--purple); } .part.s { --c: var(--cyan); }
+
+  .resp-line { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; font: 13px var(--mono); overflow-wrap: anywhere; }
+  .status { padding: 2px 10px; border-radius: 999px; font-weight: 700; color: var(--bg); background: var(--gray); }
+  .status.s2 { background: var(--blue); } .status.s4 { background: var(--amber); } .status.s0 { background: var(--red); }
+  pre#respBody { padding: 10px 12px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); max-height: 340px; overflow: auto; }
+  footer { max-width: 1320px; margin: 0 auto; padding: 0 24px 32px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div class="logo">BSC</div>
+    <div><strong>Backend Security Challenges</strong><span class="sub">Lab 01: Subdomain token isolation</span></div>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="Switch subdomain"></nav>
+</header>
+
+<main>
+  <section class="card banner" aria-label="Live subdomain context">
+    <div class="cell">
+      <span class="k">You are on</span>
+      <div class="origin" id="origin"></div>
+      <span class="chip" id="roleChip"></span>
+      <p id="roleText"></p>
+    </div>
+    <div class="cell">
+      <span class="k">document.cookie: what this page's scripts can read</span>
+      <code id="cookies"></code>
+    </div>
+    <div class="cell">
+      <span class="k">IdP session: what auth says about you</span>
+      <code id="session"></code>
+    </div>
+    <div class="cell">
+      <span class="k">Token in memory</span>
+      <code id="tokenState"></code>
+    </div>
+  </section>
+
+  <div class="layout">
+    <section class="card" aria-label="Experiment controls">
+      <h2>Experiments</h2>
+
+      <div class="group">
+        <h3>Sign in at the IdP</h3>
+        <p>One demo user, no password. Pick how the IdP remembers you.</p>
+        <button class="btn warn" id="btnLoginBad">Log in: vulnerable (apex cookie)</button>
+        <button class="btn good" id="btnLoginGood">Log in: hardened (host-only cookie)</button>
+        <button class="btn ghost" id="btnLogout">Log out and reset</button>
+      </div>
+
+      <div class="group">
+        <h3><span class="num">1</span>Apex cookie leak</h3>
+        <p>Call the API with <code>credentials: 'include'</code> and see which cookie the browser attaches.</p>
+        <button class="btn danger" id="btnLeak">Trigger apex cookie leak</button>
+      </div>
+
+      <div class="group">
+        <h3><span class="num">2</span>Scoped token</h3>
+        <p id="tokenHelp">Ask the IdP for a short-lived JWT that only works from this subdomain.</p>
+        <button class="btn good" id="btnMint">Request scoped JWT</button>
+        <button class="btn good" id="btnSecure">Call API with token</button>
+      </div>
+
+      <div class="group">
+        <h3><span class="num">3</span>Token theft and replay</h3>
+        <p id="theftHelp"></p>
+        <button class="btn danger" id="btnTheft">Simulate token theft / replay attack</button>
+        <button class="btn ghost hidden" id="btnCrossMint">Ask the IdP for a gaming token</button>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Traffic flow">
+      <h2>Traffic flow</h2>
+      <div class="legend">
+        <span class="tone-green"><i></i>isolated or verified</span>
+        <span class="tone-red"><i></i>leaked cookie or blocked attack</span>
+        <span class="tone-amber"><i></i>works, but risky</span>
+        <span class="tone-gray"><i></i>neutral</span>
+      </div>
+      <svg id="flow" viewBox="0 0 920 330" role="img" aria-label="Animated diagram of requests between the browser, the identity provider, the two subdomains and the API"></svg>
+      <div class="verdict" id="verdict" aria-live="polite">
+        <strong>Ready</strong>
+        <span>Pick an experiment on the left. Every packet you see is a real HTTP request to the lab server.</span>
+      </div>
+      <ol id="steps"></ol>
+    </section>
+  </div>
+
+  <div class="layout two">
+    <section class="card" aria-label="JWT inspector">
+      <h2>JWT inspector</h2>
+      <div id="jwtEmpty" class="muted">No token yet. Run experiment 2 on gaming or finance and the token will be decoded here.</div>
+      <div id="jwtView" class="hidden">
+        <span class="jwt-label" id="jwtLabel"></span>
+        <div class="jwt-raw" id="jwtRaw"></div>
+        <div class="jwt-parts">
+          <div class="part h"><h4>HEADER</h4><pre id="jwtHeader"></pre></div>
+          <div class="part p"><h4>PAYLOAD</h4><pre id="jwtPayload"></pre></div>
+          <div class="part s"><h4>SIGNATURE</h4><pre id="jwtSig"></pre></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Last response">
+      <h2>Last response</h2>
+      <div class="resp-line"><span class="status" id="respStatus">none</span><span id="respUrl" class="muted">No request sent yet.</span></div>
+      <pre id="respBody">{}</pre>
+    </section>
+  </div>
+</main>
+
+<footer>Local teaching lab. It runs on 127.0.0.1 only, with one demo user and a signing key that is thrown away on restart.</footer>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---- Where are we? Everything is derived from the address bar. ----------
+  const labels = location.hostname.split('.');
+  const SUB = labels[0];
+  const APEX = labels.slice(1).join('.');
+  const PORT = location.port ? ':' + location.port : '';
+  const hostOf = (name) => name + '.' + APEX;
+  const originOf = (name) => location.protocol + '//' + hostOf(name) + PORT;
+  const ME = location.hostname;
+  const ARROW = ' → ';
+
+  const ROLES = {
+    auth: {
+      chip: 'Identity provider',
+      text: 'The IdP logs you in. It is not a tenant, so token experiments run on gaming or finance.',
+    },
+    gaming: {
+      chip: 'Tenant A: trusted',
+      text: 'A legitimate app. This is where the user means to be.',
+    },
+    finance: {
+      chip: 'Sibling B: untrusted',
+      text: 'Pretend someone else runs this subdomain, or that it was taken over. Its scripts are the attacker.',
+    },
+  };
+  const role = ROLES[SUB] || { chip: 'Unknown host', text: 'Open the auth, gaming or finance subdomain.' };
+
+  const state = { token: null, stolen: null, inspect: null, session: null, busy: false };
+
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, text) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text != null) node.textContent = text;
+    return node;
+  };
+
+  // ---- JWT decoding, done here in the page. No key needed to READ a JWT. --
+  function b64urlToText(part) {
+    const pad = part.length % 4 ? '='.repeat(4 - (part.length % 4)) : '';
+    const bin = atob(part.replace(/-/g, '+').replace(/_/g, '/') + pad);
+    return new TextDecoder().decode(Uint8Array.from(bin, (ch) => ch.charCodeAt(0)));
+  }
+  function decodeJwt(token) {
+    const parts = String(token).split('.');
+    if (parts.length !== 3) return null;
+    try {
+      return { parts, header: JSON.parse(b64urlToText(parts[0])), payload: JSON.parse(b64urlToText(parts[1])) };
+    } catch {
+      return null;
+    }
+  }
+  const secondsLeft = (decoded) => decoded.payload.exp - Math.floor(Date.now() / 1000);
+
+  // ---- One fetch helper. Status 0 means the browser gave us nothing. ------
+  async function call(method, url, options = {}) {
+    try {
+      const response = await fetch(url, { method, cache: 'no-store', ...options });
+      let body = null;
+      try { body = await response.json(); } catch { /* no JSON body */ }
+      return { status: response.status, body };
+    } catch {
+      return {
+        status: 0,
+        body: { error: 'no_readable_response', message: 'The browser got no readable response (server down, or blocked by CORS).' },
+      };
+    }
+  }
+
+  // ---- Banner --------------------------------------------------------------
+  let lastCookie = null;
+  function renderCookies() {
+    const cookie = document.cookie;
+    if (cookie === lastCookie) return;
+    lastCookie = cookie;
+    const box = $('cookies');
+    box.textContent = '';
+    if (!cookie) {
+      box.append(el('span', 'muted', '(empty) scripts on this page see no cookies'));
+      return;
+    }
+    for (const pair of cookie.split('; ')) {
+      box.append(el('span', pair.startsWith('master_session=') ? 'tok red' : 'tok', pair));
+    }
+  }
+
+  function renderSession() {
+    const box = $('session');
+    box.textContent = '';
+    const s = state.session;
+    if (!s || !s.loggedIn) {
+      box.append(el('span', 'muted', 'none: the IdP does not know you'));
+    } else if (s.mode === 'vulnerable') {
+      box.append(el('span', 'tok red', s.user + ', apex cookie'), el('span', 'muted', 'master_session with Domain=.' + APEX));
+    } else {
+      box.append(el('span', 'tok green', s.user + ', host-only cookie'), el('span', 'muted', 'auth_idp_session is HttpOnly and only goes to ' + hostOf('auth')));
+    }
+  }
+
+  function renderToken() {
+    const box = $('tokenState');
+    box.textContent = '';
+    const show = (token, prefix, liveClass) => {
+      const decoded = decodeJwt(token);
+      if (!decoded) return;
+      const left = secondsLeft(decoded);
+      const text = prefix + 'tenant=' + decoded.payload.tenant + (left > 0 ? ', expires in ' + left + 's' : ', expired');
+      box.append(el('span', left > 0 ? liveClass : 'tok amber', text));
+    };
+    if (state.token) show(state.token, '', 'tok green');
+    if (state.stolen) show(state.stolen, 'STOLEN ', 'tok red');
+    if (!state.token && !state.stolen) box.append(el('span', 'muted', 'none (tokens live in a JS variable, a reload clears them)'));
+  }
+
+  async function refreshSession() {
+    const res = await call('GET', originOf('auth') + '/session', { credentials: 'include' });
+    state.session = res.status === 200 ? res.body : null;
+    renderSession();
+  }
+
+  // ---- JWT inspector -------------------------------------------------------
+  const CLAIM_NOTES = {
+    alg: 'how it was signed',
+    typ: 'what kind of token',
+    iss: 'who issued it',
+    aud: 'who it is meant for',
+    sub: 'the user',
+    tenant: 'the ONLY subdomain that may use it',
+    iat: 'issued at',
+    exp: 'expires at',
+  };
+  let expNote = null;
+
+  function jsonLines(pre, object, highlightKey) {
+    pre.textContent = '';
+    const keys = Object.keys(object);
+    pre.append('{\n');
+    keys.forEach((key, index) => {
+      const line = '"' + key + '": ' + JSON.stringify(object[key]) + (index < keys.length - 1 ? ',' : '');
+      pre.append('  ', el('span', key === highlightKey ? 'hl' : '', line));
+      if (CLAIM_NOTES[key]) {
+        const note = el('span', 'note', '   // ' + CLAIM_NOTES[key]);
+        if (key === 'exp') expNote = note;
+        pre.append(note);
+      }
+      pre.append('\n');
+    });
+    pre.append('}');
+  }
+
+  function renderInspector() {
+    const decoded = state.inspect && decodeJwt(state.inspect.token);
+    $('jwtEmpty').classList.toggle('hidden', Boolean(decoded));
+    $('jwtView').classList.toggle('hidden', !decoded);
+    expNote = null;
+    if (!decoded) return;
+    const label = $('jwtLabel');
+    label.textContent = state.inspect.label;
+    label.className = 'jwt-label tone-' + state.inspect.tone;
+    const raw = $('jwtRaw');
+    raw.textContent = '';
+    raw.append(el('span', 'seg-h', decoded.parts[0]), '.', el('span', 'seg-p', decoded.parts[1]), '.', el('span', 'seg-s', decoded.parts[2]));
+    jsonLines($('jwtHeader'), decoded.header, null);
+    jsonLines($('jwtPayload'), decoded.payload, 'tenant');
+    $('jwtSig').textContent = decoded.parts[2] + '\n';
+    $('jwtSig').append(el('span', 'note', '// HMAC-SHA256 over header.payload with a key only the lab server holds.\n// Anyone can read a JWT. Nobody without the key can change one.'));
+    tick();
+  }
+
+  function tick() {
+    renderCookies();
+    renderToken();
+    if (expNote && state.inspect) {
+      const decoded = decodeJwt(state.inspect.token);
+      const left = decoded ? secondsLeft(decoded) : 0;
+      expNote.textContent = '   // expires at: ' + (left > 0 ? left + 's left' : 'EXPIRED');
+    }
+  }
+
+  // ---- Traffic flow diagram ------------------------------------------------
+  const NS = 'http://www.w3.org/2000/svg';
+  const sv = (tag, attrs, text) => {
+    const node = document.createElementNS(NS, tag);
+    for (const key in attrs) node.setAttribute(key, attrs[key]);
+    if (text != null) node.textContent = text;
+    return node;
+  };
+  const NODES = {
+    browser: { cx: 115, cy: 165, w: 170, h: 84, title: 'Browser', sub: 'this tab, on ' + SUB },
+    auth: { cx: 460, cy: 52, w: 210, h: 64, title: hostOf('auth'), sub: 'identity provider' },
+    gaming: { cx: 300, cy: 278, w: 200, h: 64, title: hostOf('gaming'), sub: 'tenant A, trusted' },
+    finance: { cx: 600, cy: 278, w: 200, h: 64, title: hostOf('finance'), sub: 'sibling B, untrusted' },
+    api: { cx: 805, cy: 165, w: 190, h: 84, title: hostOf('api'), sub: 'resource server' },
+  };
+  const NAME = { browser: 'Browser', auth: hostOf('auth'), gaming: hostOf('gaming'), finance: hostOf('finance'), api: hostOf('api') };
+  const EDGES = [['browser', 'auth'], ['browser', 'api'], ['browser', 'gaming'], ['browser', 'finance'], ['gaming', 'finance']];
+  const flow = $('flow');
+  const packetLayer = sv('g', {});
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // The point where the line from one box to another leaves the first box.
+  function edgePoint(from, to) {
+    const dx = to.cx - from.cx;
+    const dy = to.cy - from.cy;
+    const sx = dx === 0 ? Infinity : from.w / 2 / Math.abs(dx);
+    const sy = dy === 0 ? Infinity : from.h / 2 / Math.abs(dy);
+    const scale = Math.min(sx, sy);
+    return { x: from.cx + dx * scale, y: from.cy + dy * scale };
+  }
+
+  function drawDiagram() {
+    for (const [a, b] of EDGES) {
+      const p = edgePoint(NODES[a], NODES[b]);
+      const q = edgePoint(NODES[b], NODES[a]);
+      flow.append(sv('line', { x1: p.x, y1: p.y, x2: q.x, y2: q.y, class: a === 'gaming' && b === 'finance' ? 'edge theft' : 'edge' }));
+    }
+    for (const key in NODES) {
+      const n = NODES[key];
+      const group = sv('g', { class: key === SUB ? 'node here' : 'node', id: 'node-' + key });
+      group.append(
+        sv('rect', { x: n.cx - n.w / 2, y: n.cy - n.h / 2, width: n.w, height: n.h, rx: 12 }),
+        sv('text', { x: n.cx, y: n.cy - 2, 'text-anchor': 'middle' }, n.title),
+        sv('text', { x: n.cx, y: n.cy + 17, 'text-anchor': 'middle', class: 's' }, n.sub),
+      );
+      if (key === SUB) {
+        const above = key === 'auth';
+        group.append(sv('text', { x: n.cx, y: above ? n.cy + n.h / 2 + 15 : n.cy - n.h / 2 - 8, 'text-anchor': 'middle', class: 'tag' }, 'THIS PAGE'));
+      }
+      flow.append(group);
+    }
+    flow.append(packetLayer);
+  }
+
+  function pulse(key, tone) {
+    const node = $('node-' + key);
+    node.classList.add('pulse', 'tone-' + tone);
+    setTimeout(() => node.classList.remove('pulse', 'tone-' + tone), 650);
+  }
+
+  // Move one packet from box to box. Resolves when it has arrived.
+  function fly(fromKey, toKey, label, tone) {
+    return new Promise((resolve) => {
+      const a = edgePoint(NODES[fromKey], NODES[toKey]);
+      const b = edgePoint(NODES[toKey], NODES[fromKey]);
+      const wire = sv('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'wire tone-' + tone });
+      const packet = sv('g', { class: 'packet tone-' + tone });
+      const width = label.length * 7.1 + 18;
+      packet.append(
+        sv('rect', { x: -width / 2, y: -32, width, height: 20, rx: 10 }),
+        sv('text', { x: 0, y: -18, 'text-anchor': 'middle' }, label),
+        sv('circle', { r: 6 }),
+      );
+      packetLayer.append(wire, packet);
+      const duration = reducedMotion ? 200 : 1000;
+      const start = performance.now();
+      let finished = false;
+      const place = (t) => {
+        const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        const x = a.x + (b.x - a.x) * eased;
+        const y = a.y + (b.y - a.y) * eased;
+        // Keep the label inside the picture near the left and right edges.
+        const shift = Math.max(width / 2 + 4 - x, Math.min(0, 916 - width / 2 - x));
+        packet.setAttribute('transform', 'translate(' + x + ' ' + y + ')');
+        packet.children[0].setAttribute('transform', 'translate(' + shift + ' 0)');
+        packet.children[1].setAttribute('transform', 'translate(' + shift + ' 0)');
+      };
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        place(1);
+        pulse(toKey, tone);
+        setTimeout(() => { wire.remove(); packet.remove(); resolve(); }, reducedMotion ? 100 : 380);
+      };
+      const frame = (now) => {
+        if (finished) return;
+        const t = Math.min(1, (now - start) / duration);
+        place(t);
+        if (t < 1) requestAnimationFrame(frame); else finish();
+      };
+      place(0);
+      requestAnimationFrame(frame);
+      // Background tabs pause animation frames. Never let a flow hang on that.
+      setTimeout(finish, duration + 400);
+    });
+  }
+
+  function logStep(from, to, text, tone) {
+    const item = el('li', 'tone-' + tone);
+    item.append(el('span', 'route', NAME[from] + ARROW + NAME[to]), el('span', 'what', text));
+    $('steps').append(item);
+  }
+  async function hop(from, to, label, tone, detail) {
+    logStep(from, to, detail || label, tone);
+    await fly(from, to, label, tone);
+  }
+
+  function verdict(tone, title, text) {
+    const box = $('verdict');
+    box.className = 'verdict tone-' + tone;
+    box.textContent = '';
+    box.append(el('strong', '', title), el('span', '', text));
+  }
+
+  function showResponse(method, url, res) {
+    const status = $('respStatus');
+    status.textContent = res.status === 0 ? 'blocked' : 'HTTP ' + res.status;
+    status.className = 'status ' + (res.status === 0 ? 's0' : res.status < 300 ? 's2' : 's4');
+    const line = $('respUrl');
+    line.className = '';
+    line.textContent = method + ' ' + url;
+    $('respBody').textContent = JSON.stringify(res.body, null, 2);
+  }
+
+  function unexpected(res) {
+    verdict('amber', 'Unexpected answer', res.status === 0
+      ? 'The browser got no readable response. Is the lab server still running?'
+      : 'The server answered HTTP ' + res.status + '. See the response panel for details.');
+  }
+
+  // ---- Sign in -------------------------------------------------------------
+  async function loginBad() {
+    const url = originOf('auth') + '/login-bad';
+    await hop('browser', 'auth', 'POST /login-bad', 'amber');
+    const res = await call('POST', url, { credentials: 'include' });
+    showResponse('POST', url, res);
+    if (res.status !== 200) return unexpected(res);
+    await hop('auth', 'browser', 'Set-Cookie: Domain=.' + APEX, 'red',
+      'Set-Cookie: master_session=...; Domain=.' + APEX + '; Path=/; SameSite=Lax');
+    verdict('red', 'Apex cookie set',
+      'The IdP scoped master_session to .' + APEX + '. Look at document.cookie above: this page can read the session id, and so can every sibling subdomain. '
+      + (SUB === 'finance' ? 'Now click "Trigger apex cookie leak".' : 'Open ' + hostOf('finance') + ' and look at its banner.'));
+  }
+
+  async function loginGood() {
+    const url = originOf('auth') + '/login-good';
+    await hop('browser', 'auth', 'POST /login-good', 'green');
+    const res = await call('POST', url, { credentials: 'include' });
+    showResponse('POST', url, res);
+    if (res.status !== 200) return unexpected(res);
+    await hop('auth', 'browser', 'Set-Cookie: host-only, HttpOnly', 'green',
+      'Set-Cookie: auth_idp_session=...; Path=/; HttpOnly; SameSite=Lax. No Domain attribute, so it is locked to ' + hostOf('auth'));
+    verdict('green', 'Host-only session set',
+      'The cookie has no Domain attribute, so the browser keeps it for ' + hostOf('auth') + ' alone. '
+      + (SUB === 'auth' ? 'It is HttpOnly too, so even this page cannot read it.' : 'document.cookie above stays empty, yet the IdP still knows you.'));
+  }
+
+  async function logout() {
+    const url = originOf('auth') + '/logout';
+    await hop('browser', 'auth', 'POST /logout', 'gray');
+    const res = await call('POST', url, { credentials: 'include' });
+    showResponse('POST', url, res);
+    state.token = null;
+    state.stolen = null;
+    state.inspect = null;
+    renderInspector();
+    verdict('gray', 'Logged out',
+      'Both cookies are cleared and this page forgot its tokens. Note: a token that was already minted stays valid until it expires. That is why tokens are short-lived.');
+  }
+
+  // ---- Experiment 1: the apex cookie leak ---------------------------------
+  async function cookieLeak() {
+    const url = originOf('api') + '/api/cookie-data';
+    const hasCookie = document.cookie.split('; ').some((pair) => pair.startsWith('master_session='))
+      || Boolean(state.session && state.session.mode === 'vulnerable');
+    const hostile = SUB === 'finance';
+    const tone = hasCookie ? (hostile ? 'red' : 'amber') : 'gray';
+    if (NODES[SUB] && SUB !== 'auth') {
+      await hop(SUB, 'browser', 'page script calls fetch()', 'gray',
+        "A script served by " + ME + " runs fetch(url, { credentials: 'include' })");
+    }
+    await hop('browser', 'api', hasCookie ? 'GET + Cookie: master_session' : 'GET, no cookie to send', tone,
+      'GET /api/cookie-data. ' + (hasCookie
+        ? 'The browser attaches Cookie: master_session on its own, because the cookie covers .' + APEX
+        : 'The browser has no cookie that matches ' + hostOf('api')));
+    const res = await call('GET', url, { credentials: 'include' });
+    showResponse('GET', url, res);
+    if (res.status === 200) {
+      await hop('api', 'browser', '200 whole account', hostile ? 'red' : 'amber', '200 OK: the whole account, for every tenant');
+      if (hostile) {
+        verdict('red', 'Leak confirmed',
+          'This page is ' + ME + ', the untrusted sibling. It never logged you in. The browser still attached master_session, and the API returned the whole account, gaming data included. The script can also read the session id straight from document.cookie.');
+      } else {
+        verdict('amber', 'It works, and that is the trap',
+          'The cookie did its job here. But the same cookie goes to every sibling under .' + APEX + '. Open ' + hostOf('finance') + ' and run this again.');
+      }
+    } else if (res.status === 401) {
+      await hop('api', 'browser', '401 no session cookie', 'green', '401: no session cookie reached the API');
+      if (state.session && state.session.mode === 'hardened') {
+        verdict('green', 'Isolated',
+          'You are logged in, but the session cookie is host-only on ' + hostOf('auth') + '. The browser did not send it to ' + hostOf('api') + ', and this page cannot read it. Nothing to leak.');
+      } else {
+        verdict('gray', 'Not logged in', 'There is no apex cookie yet. Click "Log in: vulnerable" first, then run this again.');
+      }
+    } else {
+      unexpected(res);
+    }
+  }
+
+  // ---- Experiment 2: the scoped token -------------------------------------
+  async function mintToken() {
+    const url = originOf('auth') + '/mint-token?tenant=' + encodeURIComponent(ME);
+    await hop('browser', 'auth', 'GET /mint-token?tenant=' + SUB, 'green',
+      'GET /mint-token?tenant=' + ME + '. The browser adds Origin: ' + location.origin + ' and the host-only IdP cookie');
+    const res = await call('GET', url, { credentials: 'include' });
+    showResponse('GET', url, res);
+    if (res.status === 200) {
+      state.token = res.body.token;
+      state.inspect = { token: state.token, label: 'Minted for this page: ' + ME, tone: 'green' };
+      renderInspector();
+      await hop('auth', 'browser', 'JWT tenant=' + SUB, 'green',
+        '200: a signed JWT with tenant=' + ME + ', valid for ' + res.body.expires_in + ' seconds');
+      verdict('green', 'Scoped token issued',
+        'The token is held in a JavaScript variable, not in a cookie. Its tenant claim names ' + ME + ' and nothing else. See the inspector below.');
+      return true;
+    }
+    if (res.status === 401) {
+      await hop('auth', 'browser', '401 no IdP session', 'amber', '401: the IdP has no hardened session for you');
+      verdict('amber', 'No hardened session', 'The IdP only mints tokens for a hardened session. Click "Log in: hardened" first.');
+    } else {
+      unexpected(res);
+    }
+    return false;
+  }
+
+  async function callSecure() {
+    if (!state.token) {
+      verdict('gray', 'No token yet', 'Click "Request scoped JWT" first.');
+      return;
+    }
+    const url = originOf('api') + '/api/secure-data';
+    await hop('browser', 'api', 'Bearer JWT tenant=' + SUB, 'green',
+      'GET /api/secure-data with Authorization: Bearer <token>. The browser adds Origin: ' + location.origin);
+    const res = await call('GET', url, { headers: { Authorization: 'Bearer ' + state.token }, credentials: 'omit' });
+    showResponse('GET', url, res);
+    if (res.status === 200) {
+      await hop('api', 'browser', '200 verified', 'green', '200 OK: only the data that belongs to ' + ME);
+      verdict('green', 'Verified',
+        'The API checked the signature, the expiry, and that the tenant claim matches the Origin header. It returned only the slice of the account that belongs to ' + ME + '.');
+    } else if (res.status === 401) {
+      await hop('api', 'browser', '401 invalid token', 'amber', '401: ' + (res.body && res.body.message));
+      verdict('amber', 'Token rejected', 'The token is no longer valid, most likely expired. Request a new one.');
+    } else {
+      unexpected(res);
+    }
+  }
+
+  // ---- Experiment 3: theft and replay -------------------------------------
+  // The theft itself is simulated: gaming hands its own token to finance in
+  // the URL fragment. Everything after that is real.
+  async function theftFromGaming() {
+    const decoded = state.token && decodeJwt(state.token);
+    if (!decoded || secondsLeft(decoded) < 5) {
+      const minted = await mintToken();
+      if (!minted) return;
+    }
+    await hop('gaming', 'finance', 'stolen JWT tenant=gaming', 'red',
+      'Simulated theft: the token minted for ' + ME + ' is carried to ' + hostOf('finance'));
+    location.href = originOf('finance') + '/#stolen=' + encodeURIComponent(state.token);
+  }
+
+  async function replayStolen() {
+    const url = originOf('api') + '/api/secure-data';
+    await hop('gaming', 'finance', 'stolen JWT tenant=gaming', 'red',
+      'Simulated theft: a real token minted for ' + hostOf('gaming') + ' is now in the hands of this page');
+    await hop('browser', 'api', 'Bearer stolen JWT', 'red',
+      'GET /api/secure-data with the stolen token. The browser adds Origin: ' + location.origin + ', and no script can change that');
+    const res = await call('GET', url, { headers: { Authorization: 'Bearer ' + state.stolen }, credentials: 'omit' });
+    showResponse('GET', url, res);
+    if (res.status === 403) {
+      await hop('api', 'browser', '403 ' + (res.body && res.body.error), 'red', '403 Forbidden: ' + (res.body && res.body.message));
+      verdict('green', 'Replay blocked with HTTP 403',
+        'The signature was valid, so the token is real. But its tenant claim says ' + (res.body && res.body.tokenTenant)
+        + ' and the browser reported Origin ' + ME + '. The API refused. The stolen token is useless from this subdomain.');
+    } else if (res.status === 401) {
+      await hop('api', 'browser', '401 invalid token', 'amber', '401: ' + (res.body && res.body.message));
+      state.stolen = null;
+      verdict('amber', 'Stolen token already expired', 'Tokens only live for two minutes. Click the button again to steal a fresh one.');
+    } else if (res.status === 200) {
+      await hop('api', 'browser', '200 replay worked', 'red', '200 OK');
+      verdict('red', 'Replay worked', 'This should never happen in this lab. The tenant check on the API is missing or broken.');
+    } else {
+      unexpected(res);
+    }
+  }
+
+  async function theft() {
+    if (SUB === 'gaming') return theftFromGaming();
+    if (SUB === 'finance' && state.stolen) return replayStolen();
+    // No token to replay yet. Go to gaming, which mints one and sends it back.
+    location.href = originOf('gaming') + '/#demo-theft';
+  }
+
+  // Finance asks the IdP directly for a token that says "gaming".
+  async function crossMint() {
+    const url = originOf('auth') + '/mint-token?tenant=' + encodeURIComponent(hostOf('gaming'));
+    await hop('browser', 'auth', 'GET /mint-token?tenant=gaming', 'red',
+      'GET /mint-token?tenant=' + hostOf('gaming') + ', but the browser reports Origin: ' + location.origin);
+    const res = await call('GET', url, { credentials: 'include' });
+    showResponse('GET', url, res);
+    if (res.status === 403) {
+      await hop('auth', 'browser', '403 ' + (res.body && res.body.error), 'red', '403 Forbidden: ' + (res.body && res.body.message));
+      verdict('green', 'IdP refused',
+        'This page asked for a gaming token. The IdP compared the request with the Origin header and said no. A sibling cannot simply ask for another tenant\'s token.');
+    } else if (res.status === 401) {
+      await hop('auth', 'browser', '401 no IdP session', 'amber', '401: the IdP has no hardened session for you');
+      verdict('amber', 'No hardened session', 'Click "Log in: hardened" first, then try again.');
+    } else {
+      unexpected(res);
+    }
+  }
+
+  // ---- Wiring --------------------------------------------------------------
+  const tenantOnly = ['btnMint', 'btnSecure'];
+  function setButtons() {
+    for (const button of document.querySelectorAll('button.btn')) {
+      button.disabled = state.busy || (SUB === 'auth' && tenantOnly.includes(button.id));
+    }
+  }
+
+  async function run(action) {
+    if (state.busy) return;
+    state.busy = true;
+    setButtons();
+    $('steps').textContent = '';
+    verdict('gray', 'Running', 'Watch the packets. Each step is listed below as it happens.');
+    try {
+      await action();
+    } finally {
+      state.busy = false;
+      setButtons();
+      await refreshSession();
+      tick();
+    }
+  }
+
+  function init() {
+    document.body.dataset.role = SUB;
+    $('origin').textContent = location.origin;
+    $('roleChip').textContent = role.chip;
+    $('roleText').textContent = role.text;
+
+    for (const name of ['auth', 'gaming', 'finance']) {
+      const link = el('a', name === SUB ? 'active' : '', hostOf(name));
+      link.href = originOf(name) + '/';
+      if (name === SUB) link.setAttribute('aria-current', 'page');
+      $('tabs').append(link);
+    }
+
+    if (SUB === 'auth') {
+      $('tokenHelp').textContent = 'Tokens are minted for tenants. Open gaming or finance to run this one.';
+    }
+    $('theftHelp').textContent = SUB === 'finance'
+      ? 'Replay a token that was minted for gaming from this page. If you have none yet, the button fetches one from gaming first.'
+      : 'Take a token minted for gaming, carry it to finance, and replay it there against the API.';
+    $('btnCrossMint').classList.toggle('hidden', SUB !== 'finance');
+
+    drawDiagram();
+    $('btnLoginBad').addEventListener('click', () => run(loginBad));
+    $('btnLoginGood').addEventListener('click', () => run(loginGood));
+    $('btnLogout').addEventListener('click', () => run(logout));
+    $('btnLeak').addEventListener('click', () => run(cookieLeak));
+    $('btnMint').addEventListener('click', () => run(mintToken));
+    $('btnSecure').addEventListener('click', () => run(callSecure));
+    $('btnTheft').addEventListener('click', () => run(theft));
+    $('btnCrossMint').addEventListener('click', () => run(crossMint));
+
+    setButtons();
+    renderInspector();
+    tick();
+    refreshSession();
+    setInterval(tick, 1000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshSession(); });
+
+    // Hand-off for experiment 3. The fragment never reaches the server.
+    const hash = location.hash;
+    if (hash) history.replaceState(null, '', location.pathname);
+    if (SUB === 'finance' && hash.startsWith('#stolen=')) {
+      const token = decodeURIComponent(hash.slice('#stolen='.length));
+      if (/^[\w-]+\.[\w-]+\.[\w-]+$/.test(token) && decodeJwt(token)) {
+        state.stolen = token;
+        state.inspect = { token, label: 'STOLEN: minted for ' + decodeJwt(token).payload.tenant + ', now on ' + ME, tone: 'red' };
+        renderInspector();
+        run(replayStolen);
+      }
+    } else if (SUB === 'gaming' && hash === '#demo-theft') {
+      run(theftFromGaming);
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

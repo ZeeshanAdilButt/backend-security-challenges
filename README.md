@@ -34,10 +34,10 @@ A company runs several apps under one domain and wants "log in once, use everyth
 The browser's same-origin policy keeps pages on different subdomains apart. That cookie walks straight through the wall. The browser sends it to **every** subdomain, so the weakest app now holds the keys to all of them.
 
 ```mermaid
-flowchart LR
-    U["Browser"]
-    subgraph apex["example.com: one registrable domain"]
-        A["auth.example.com<br/>login"]
+flowchart TD
+    A["auth.example.com<br/>login"]
+    U["Browser<br/>holds master_session"]
+    subgraph apex["Every host under example.com gets the cookie"]
         G["gaming.example.com<br/>trusted app"]
         F["finance.example.com<br/>untrusted or taken over"]
         API["api.example.com<br/>user data"]
@@ -46,7 +46,7 @@ flowchart LR
     U -- "cookie sent" --> G
     U -- "same cookie sent" --> F
     U -- "same cookie sent" --> API
-    F -. "fetch with credentials: include<br/>rides the user's session" .-> API
+    F -. "calls the API as the user" .-> API
 
     classDef bad fill:#3b0d14,stroke:#fb7185,color:#ffffff
     classDef ok fill:#0d2b22,stroke:#34d399,color:#ffffff
@@ -65,20 +65,16 @@ Keep the session cookie in one place and hand each app only what it needs.
 - The API checks the signature and checks that the `tenant` claim matches the subdomain the request came from.
 
 ```mermaid
-flowchart LR
-    U["Browser"]
-    A["auth.lab.localhost<br/>central IdP"]
-    G["gaming.lab.localhost<br/>keeps its token in memory"]
+flowchart TD
+    A["auth.lab.localhost<br/>central IdP<br/>host-only session cookie stays here"]
+    G["gaming.lab.localhost<br/>token kept in memory"]
     F["finance.lab.localhost<br/>untrusted sibling"]
     API["api.lab.localhost<br/>checks signature and tenant"]
 
-    A -- "(1) host-only cookie<br/>auth_idp_session, HttpOnly" --> U
-    G -- "(2) mint-token?tenant=gaming" --> A
-    A -- "(3) JWT with iss, aud, sub, tenant=gaming<br/>valid for 120 seconds" --> G
-    G -- "(4) Bearer token, Origin is gaming" --> API
-    API -- "200, gaming data only" --> G
-    F -. "stolen gaming token, Origin is finance" .-> API
-    API -. "403 tenant mismatch" .-> F
+    A -- "JWT, tenant=gaming<br/>valid 120 seconds" --> G
+    A -- "JWT, tenant=finance" --> F
+    G -- "gaming token: 200" --> API
+    F -. "stolen gaming token: 403" .-> API
 
     classDef bad fill:#3b0d14,stroke:#fb7185,color:#ffffff
     classDef ok fill:#0d2b22,stroke:#34d399,color:#ffffff
